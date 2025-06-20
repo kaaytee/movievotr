@@ -26,5 +26,3 @@ def init_db():
             hashed_password=get_password_hash(admin_password),
             is_superuser=True
         )
-
-    db.create_tables(TABLES_TO_CREATE)
