@@ -12,6 +12,22 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:13-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        # Add a health check to wait for the database to be ready
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -30,17 +46,20 @@ jobs:
       - name: Run tests
         working-directory: ./backend
         env:
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          # Database credentials for the service container
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: testdb
+          DB_USER: testuser
+          DB_PASSWORD: testpassword
+
+          # Other secrets remain the same
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
-          ALGORITHM: ${{ secrets.ALGORITHM }}
-          ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
-          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
-          TMDB_API_URL: ${{ secrets.TMDB_API_URL }}
-          API_URL: ${{ secrets.API_URL }}
+          ALGORITHM: "HS256"
+          ACCESS_TOKEN_EXPIRE_MINUTES: 30
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }} 
+          TMDB_API_URL: "https://api.themoviedb.org/3"
+          API_URL: /api/v1
           ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
