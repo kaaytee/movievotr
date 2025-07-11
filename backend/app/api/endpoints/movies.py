@@ -3,41 +3,51 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from app import crud, models, schemas
 from app.api import deps
-from app.core.config import settings
+from app.crud import tmdb_util
+
+
 
 router = APIRouter()
 
+
+# for now it takes a int 
+#  but in the futur will be a query string -> tmdb resutl
 @router.get("/tmdb/search", response_model=List[Any])
-async def search_tmdb_movies(
-    query: str,
-    current_user: models.User = Depends(deps.get_current_user)
-):
+async def search_tmdb_movies(query: int, current_user: models.User = Depends(deps.get_current_user)):
     """
     Proxies a search request to the TMDb API.
     """
     if not query:
         return []
+
+    # for now bcause i cba setting up tmdb api
+    #  dummy data for movies
     
-    params = {
-        "api_key": settings.TMDB_API_KEY,
-        "query": query,
-    }
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.get(f"{settings.TMDB_API_URL}/search/movie", params=params)
-            response.raise_for_status()
-            return response.json().get("results", [])
-        except httpx.HTTPStatusError as e:
-            raise HTTPException(status_code=e.response.status_code, detail="Error fetching from TMDb API")
-        except httpx.RequestError:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="TMDb API is unavailable")
+    
+    # ok this is hella chopped but whatever
+    if not tmdb_util.check_movie_exists(query):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found")
+    
+    
+    return tmdb_util.dummy_movies[query]    
+    
+    # params = {
+    #     "api_key": settings.TMDB_API_KEY,
+    #     "query": query,
+    # }
+    # async with httpx.AsyncClient() as client:
+    #     try:
+    #         response = await client.get(f"{settings.TMDB_API_URL}/search/movie", params=params)
+    #         response.raise_for_status()
+    #         return response.json().get("results", [])
+    #     except httpx.HTTPStatusError as e:
+    #         raise HTTPException(status_code=e.response.status_code, detail="Error fetching from TMDb API")
+    #     except httpx.RequestError:
+    #         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="TMDb API is unavailable")
 
 
 @router.post("/catalog", response_model=schemas.Movie, status_code=status.HTTP_201_CREATED)
-def add_movie_to_catalog(
-    movie_in: schemas.MovieCreate,
-    current_user: models.User = Depends(deps.get_current_user)
-):
+def add_movie_to_catalog(movie_in: schemas.MovieCreate,current_user: models.User = Depends(deps.get_current_user)):
     """
     Adds a movie to the internal catalog if it doesn't already exist.
     Returns the internal movie record.
